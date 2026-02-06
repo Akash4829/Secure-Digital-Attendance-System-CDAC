@@ -1,0 +1,51 @@
+package com.cdac.attendance.service;
+
+import com.cdac.attendance.entity.Lecture;
+import com.cdac.attendance.repository.LectureRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Random;
+
+@Service
+public class FacultyService {
+
+    @Autowired
+    private LectureRepository lectureRepository;
+
+    public List<Lecture> getFacultyLectures(Long facultyId) {
+        List<Lecture> lectures = lectureRepository.findByFacultyId(facultyId);
+
+        // FIX: Check for expired OTPs every time we fetch data
+        // This solves the bug where refreshing the page shows the old OTP
+        for (Lecture l : lectures) {
+            if (l.getActiveOtp() != null && l.getOtpExpiryTime() != null) {
+                if (LocalDateTime.now().isAfter(l.getOtpExpiryTime())) {
+                    l.setActiveOtp(null);       // Kill the OTP
+                    l.setOtpExpiryTime(null);   // Clear timer
+                    lectureRepository.save(l);  // Update DB
+                }
+            }
+        }
+        return lectures;
+    }
+
+    // This is called when Faculty clicks "Start Class"
+    public Lecture startClass(Long lectureId, Double lat, Double lon) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> new RuntimeException("Lecture not found"));
+
+        // 1. Generate 4 Digit Random OTP
+        String otp = String.format("%04d", new Random().nextInt(10000));
+        
+        // 2. Save OTP, Location, AND Expiration Time (5 Minutes)
+        lecture.setActiveOtp(otp);
+        lecture.setLatitude(lat);
+        lecture.setLongitude(lon);
+        lecture.setOtpExpiryTime(LocalDateTime.now().plusMinutes(5)); // NEW LOGIC
+        
+        return lectureRepository.save(lecture);
+    }
+}

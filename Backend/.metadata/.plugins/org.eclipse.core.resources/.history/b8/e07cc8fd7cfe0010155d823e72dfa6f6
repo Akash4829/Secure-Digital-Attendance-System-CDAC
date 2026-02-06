@@ -1,0 +1,49 @@
+package com.cdac.attendance.service;
+
+import com.cdac.attendance.entity.Lecture;
+import com.cdac.attendance.repository.LectureRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Random;
+
+@Service
+public class FacultyService {
+
+    @Autowired
+    private LectureRepository lectureRepository;
+
+    public List<Lecture> getFacultyLectures(Long facultyId) {
+        List<Lecture> lectures = lectureRepository.findByFacultyId(facultyId);
+
+        // FIX: Aggressive Cleanup for Ghost Data
+        for (Lecture l : lectures) {
+            // Check if lecture has an OTP stuck
+            if (l.getActiveOtp() != null) {
+                // If Expiry is NULL (Old Data) OR Current Time > Expiry
+                if (l.getOtpExpiryTime() == null || LocalDateTime.now().isAfter(l.getOtpExpiryTime())) {
+                    l.setActiveOtp(null);       // Kill the Ghost OTP
+                    l.setOtpExpiryTime(null);   // Clean the timer
+                    lectureRepository.save(l);  // Save to DB
+                }
+            }
+        }
+        return lectures;
+    }
+
+    public Lecture startClass(Long lectureId, Double lat, Double lon) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> new RuntimeException("Lecture not found"));
+
+        String otp = String.format("%04d", new Random().nextInt(10000));
+        
+        lecture.setActiveOtp(otp);
+        lecture.setLatitude(lat);
+        lecture.setLongitude(lon);
+        lecture.setOtpExpiryTime(LocalDateTime.now().plusMinutes(5)); // 5 Minutes Validity
+        
+        return lectureRepository.save(lecture);
+    }
+}

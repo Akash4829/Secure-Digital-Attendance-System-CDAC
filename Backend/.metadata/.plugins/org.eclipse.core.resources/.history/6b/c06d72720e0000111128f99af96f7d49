@@ -1,0 +1,5 @@
+package com.cdac.attendance.dto;
+
+public class ForgotPasswordRequest {
+
+}

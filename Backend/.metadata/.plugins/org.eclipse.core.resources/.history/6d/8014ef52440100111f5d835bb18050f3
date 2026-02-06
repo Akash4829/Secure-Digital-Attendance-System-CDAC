@@ -1,0 +1,39 @@
+package com.cdac.attendance.service;
+
+import com.cdac.attendance.entity.Lecture;
+import com.cdac.attendance.entity.User; // Import User
+import com.cdac.attendance.entity.Role; // Import Role
+import com.cdac.attendance.repository.LectureRepository;
+import com.cdac.attendance.repository.UserRepository; // Import Repo
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Random;
+
+@Service
+public class FacultyService {
+
+    @Autowired
+    private LectureRepository lectureRepository;
+
+    @Autowired
+    private UserRepository userRepository; // <--- 1. INJECT USER REPO
+
+    // --- NEW METHOD: Get All Students ---
+    public List<User> getStudentList() {
+        return userRepository.findByRole(Role.STUDENT);
+    }
+    // ------------------------------------
+
+    public List<Lecture> getFacultyLectures(Long facultyId) {
+        // ... (Existing code remains same) ...
+        return lectures; // Just showing context, do not change existing logic
+    }
+
+    public Lecture startClass(Long lectureId, Double lat, Double lon) {
+        // ... (Existing code remains same) ...
+        return lectureRepository.save(lecture); // Just showing context
+    }
+}

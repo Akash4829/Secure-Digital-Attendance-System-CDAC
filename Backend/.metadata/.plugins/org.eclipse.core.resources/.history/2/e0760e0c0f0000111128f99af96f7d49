@@ -1,0 +1,60 @@
+package com.cdac.attendance.controller;
+
+import com.cdac.attendance.dto.AuthResponse;
+import com.cdac.attendance.dto.LoginRequest;
+import com.cdac.attendance.service.AuthService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    @Autowired
+    private AuthService authService;
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
+    }
+
+    // --- NEW DTO CLASSES (Fixes the 400 Error) ---
+    public static class ForgotPasswordRequest {
+        private String email;
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+    }
+
+    public static class ResetPasswordRequest {
+        private String email;
+        private String otp;
+        private String newPassword;
+        // Getters and Setters
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getOtp() { return otp; }
+        public void setOtp(String otp) { this.otp = otp; }
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+    }
+    // ---------------------------------------------
+
+    // 1. Forgot Password (Updated to use DTO)
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        System.out.println("Forgot Password Requested for: " + request.getEmail()); // Debug Log
+        return ResponseEntity.ok(authService.sendPasswordResetOtp(request.getEmail()));
+    }
+
+    // 2. Reset Password (Updated to use DTO)
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        System.out.println("Reset Password Requested for: " + request.getEmail()); // Debug Log
+        return ResponseEntity.ok(authService.resetPassword(
+            request.getEmail(), 
+            request.getOtp(), 
+            request.getNewPassword()
+        ));
+    }
+}

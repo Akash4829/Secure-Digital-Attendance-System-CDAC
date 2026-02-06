@@ -1,0 +1,61 @@
+package com.cdac.attendance.service;
+
+import com.cdac.attendance.entity.Lecture;
+import com.cdac.attendance.repository.LectureRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Random;
+
+@Service
+public class FacultyService {
+
+    @Autowired
+    private LectureRepository lectureRepository;
+
+    public List<Lecture> getFacultyLectures(Long facultyId) {
+        List<Lecture> lectures = lectureRepository.findByFacultyId(facultyId);
+
+        // Cleanup Ghost OTPs
+        for (Lecture l : lectures) {
+            if (l.getActiveOtp() != null) {
+                if (l.getOtpExpiryTime() == null || LocalDateTime.now().isAfter(l.getOtpExpiryTime())) {
+                    l.setActiveOtp(null);
+                    l.setOtpExpiryTime(null);
+                    lectureRepository.save(l);
+                }
+            }
+        }
+        return lectures;
+    }
+
+    public Lecture startClass(Long lectureId, Double lat, Double lon) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> new RuntimeException("Lecture not found"));
+
+        // 🛑 NEW VALIDATION: Prevent restarting old lectures
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lectureTime = lecture.getStartTime();
+        
+        // Calculate difference in minutes
+        long minutesElapsed = ChronoUnit.MINUTES.between(lectureTime, now);
+
+        // If lecture was scheduled more than 30 minutes ago, BLOCK IT.
+        if (minutesElapsed > 30) {
+            throw new RuntimeException("Cannot start this class. The scheduled time has expired.");
+        }
+
+        // Generate OTP
+        String otp = String.format("%04d", new Random().nextInt(10000));
+        
+        lecture.setActiveOtp(otp);
+        lecture.setLatitude(lat);
+        lecture.setLongitude(lon);
+        lecture.setOtpExpiryTime(LocalDateTime.now().plusMinutes(5)); 
+        
+        return lectureRepository.save(lecture);
+    }
+}
